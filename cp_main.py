@@ -149,7 +149,7 @@ class OptimConfig:
 
 @chika.config
 class DatasetConfig:
-    name: str = chika.choices("cifar10")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition DEBUG
+    name: str = chika.choices("cifar10")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
     batch_size: int = 64    # 128   # jun ota edition
     download: bool = True   # False # jun edition
     train_size: int = None
@@ -177,7 +177,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("cifar_resnet18") # "resnet18"    # chika.choices("wrn28_2", "wrn40_2") # jun ota edition DEBUG
+    model_name: str = chika.choices("resnet18") # chika.choices("cifar_resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition DEBUG
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 1            # None  # jun ota edition
     debug: bool = False

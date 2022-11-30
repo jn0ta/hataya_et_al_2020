@@ -209,7 +209,6 @@ class Policy(nn.Module):
         mag = 0.5
         out = [
             ShearX(initial_magnitude=mag),
-            ShearX(initial_magnitude=mag),
             ShearY(initial_magnitude=mag),
             TranslateY(initial_magnitude=mag),
             TranslateY(initial_magnitude=mag),
