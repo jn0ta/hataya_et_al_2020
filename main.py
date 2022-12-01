@@ -98,6 +98,9 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
             return
 
+        # jun ota debug
+        print(f"when update the policy, self.step : {self.step}")
+
         # outer step
         # final inner step
         self.optimizer.zero_grad()
@@ -155,7 +158,7 @@ class DatasetConfig:
     train_size: int = None
     val_size: int = 10000   # 4_000 # jun ota edition
     no_pin_memory: bool = False
-    num_workers: int = 8    # 1     # jun ota edition
+    num_workers: int = 0    # 1     # jun ota edition, num_workers MUST be 0, otherwise the execution is struggling
 
     def __post_init__(self):
         self.da_interval = None
@@ -166,7 +169,7 @@ class DatasetConfig:
 class MetaConfig:
     lr: float = 1e-3
     da_interval: int = 60
-    warmup_epochs: int = 30 # jun ota edition
+    warmup_epochs: int = 30
     approx_iters: int = 5
     temperature: float = 0.1
 
@@ -223,13 +226,17 @@ def _main(cfg: Config):
             trainer.scheduler.step()
         
     # jun ota edition, saving the policy to a pytorch file xxxx.pt
-    #policy_save_filename = str("polDict_"+
-    #                        str(todays_date.year)+"-"+str(todays_date.month)+"-"+str(todays_date.day)+"-"+
-    #                        str(todays_date.hour)+"-"+str(todays_date.minute)+"-"+str(todays_date.second)+"_"+
-    #                        cfg.model_name+"_"+cfg.data.name+"_"+
-    #                        str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
-    #                        ".pt")
-    #torch.save(policy.state_dict(), policy_save_filename)
+    policy_save_filename = str("polDict_"+
+                            str(todays_date.year)+"-"+str(todays_date.month)+"-"+str(todays_date.day)+"-"+
+                            str(todays_date.hour)+"-"+str(todays_date.minute)+"-"+str(todays_date.second)+"_"+
+                            cfg.model_name+"_"+cfg.data.name+"_"+
+                            str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
+                            ".pt")
+    torch.save(policy.state_dict(), policy_save_filename)
+
+    # jun ota debug
+    for pp in policy.parameters():
+        print(pp)
 
 @chika.main(cfg_cls=Config, change_job_dir=True)
 def main(cfg):

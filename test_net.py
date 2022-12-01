@@ -192,12 +192,17 @@ if use_cuda:
 ptf.print("policy building is DONE")
 
 # ================================ data preparatioin ================================
+
+
 transform_train = transforms.Compose([
         policy.pil_forward, # augmentation, by Hataya et al., 2022
         transforms.ToTensor()
     ])
 
 transform_test = transforms.Compose([ transforms.ToTensor() ])
+
+
+
 
 
 if dataset_name == "CIFAR10":

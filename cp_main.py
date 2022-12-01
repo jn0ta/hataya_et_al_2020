@@ -155,7 +155,7 @@ class DatasetConfig:
     train_size: int = None
     val_size: int = 10000   # 4_000 # jun ota edition
     no_pin_memory: bool = False
-    num_workers: int = 8    # 1     # jun ota edition
+    num_workers: int = 1    # 8    # 1     # jun ota edition DEBUG
 
     def __post_init__(self):
         self.da_interval = None
@@ -177,7 +177,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("resnet18") # chika.choices("cifar_resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition DEBUG
+    model_name: str = chika.choices("cifar_resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 1            # None  # jun ota edition
     debug: bool = False
@@ -188,7 +188,9 @@ class Config:
 
 
 def _main(cfg: Config):
-    print(f"EXECUTED AT : {datetime.datetime.today()}") # jun ota edition
+    # jun ota edition
+    todays_date = datetime.datetime.today().replace(microsecond=0)
+    print(f"EXECUTED AT : {str(todays_date)}") 
 
     train_loader, test_loader, num_classes = get_data(cfg.data)
     model = MODEL_REGISTRY(cfg.model_name)(num_classes=num_classes)
@@ -201,7 +203,7 @@ def _main(cfg: Config):
     #scheduler = homura.lr_scheduler.CosineAnnealingWithWarmup(cfg.optim.epochs, 5, 1e-6)
     
     # jun ota edition
-    scheduler = homura.lr_scheduler.MultiStepLR(milestones=[60, 120, 160], gamma=0.2)
+    scheduler = homura.lr_scheduler.MultiStepLR(milestones=[90, 180, 240], gamma=0.2)
     
     policy = Policy.madao_policy(temperature=cfg.meta.temperature,
                                  mean=torch.as_tensor(train_loader.mean_std[0]),
@@ -219,12 +221,20 @@ def _main(cfg: Config):
             trainer.train(train_loader)
             trainer.test(test_loader)
             trainer.scheduler.step()
-
+        
+    # jun ota edition, saving the policy to a pytorch file xxxx.pt
+    #policy_save_filename = str("polDict_"+
+    #                        str(todays_date.year)+"-"+str(todays_date.month)+"-"+str(todays_date.day)+"-"+
+    #                        str(todays_date.hour)+"-"+str(todays_date.minute)+"-"+str(todays_date.second)+"_"+
+    #                        cfg.model_name+"_"+cfg.data.name+"_"+
+    #                        str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
+    #                        ".pt")
+    #torch.save(policy.state_dict(), policy_save_filename)
 
 @chika.main(cfg_cls=Config, change_job_dir=True)
 def main(cfg):
     with homura.set_seed(cfg.seed):
-        torch.cuda.set_device(cfg.gpu)
+        torch.cuda.set_device(cfg.gpu) # jun ota memo, this is DISCOURAGED,  see https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html
         _main(cfg)
 
 
