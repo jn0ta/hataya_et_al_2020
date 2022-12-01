@@ -88,9 +88,13 @@ class TrainLoader:
     def register_policy(self, policy):
         tnl = self.train_no_da_loader
         dataset = copy.deepcopy(tnl.dataset)
-        dataset.transform.transforms = self.train_da + [policy.pil_forward] + [ToTensor(),
-                                                                               Normalize(*self.mean_std),
-                                                                               RandomErasing()]
+        # dataset.transform.transforms = self.train_da + [policy.pil_forward] + [ToTensor(),
+        #                                                                       Normalize(*self.mean_std),
+        #                                                                       RandomErasing()]
+
+        # jun ota edition, RandomErasing() should not be here
+        dataset.transform.transforms = self.train_da + [policy.pil_forward] + [ToTensor(),Normalize(*self.mean_std)]
+
         train_loader = DataLoader(dataset, batch_size=tnl.batch_size, shuffle=True, num_workers=tnl.num_workers,
                                   pin_memory=tnl.pin_memory)
         self.train_da_loader = train_loader
@@ -99,7 +103,7 @@ class TrainLoader:
 def get_data(cfg):
     ds = DATASET_REGISTRY(cfg.name).setup(batch_size=cfg.batch_size, num_workers=cfg.num_workers,
                                           pin_memory=cfg.pin_memory, download=cfg.download, train_size=cfg.train_size,
-                                          val_size=cfg.val_size, post_norm_train_da=[RandomErasing()])
+                                          val_size=cfg.val_size) # , post_norm_train_da=[RandomErasing()]) # jun ota edition
     norm = ds.default_norm[-1]
     train_loader = ds.train_loader
     train_loader.dataset.transform.transforms.pop(-2)
