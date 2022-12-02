@@ -124,7 +124,8 @@ dataset_name = "CIFAR10"
 batch_size = 64             # batch size cant be 1
 trainset_rate = 0.8         # = training set size / (training set size + validation set size)
 
-policy_save_filename = 
+policy_save_filename = ""
+                        # "./outputs/2022_1201_071615_becca9/polDict_2022-12-1-7-16-17_cifar_resnet18_cifar10_300_30_60.pt"
 
 T1 = 200        # number of epochs for model training
 alpha = 0.1     # learning rate for model training
@@ -190,6 +191,12 @@ if use_cuda:
     ptf.print(" augmentation policy(nn.Module) on the GPU")
 
 ptf.print("policy building is DONE")
+
+
+# debug
+for pp in policy.parameters():
+    print(pp)
+sys.exit("debug")
 
 # ================================ data preparatioin ================================
 

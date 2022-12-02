@@ -99,7 +99,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             return
 
         # jun ota debug
-        print(f"when update the policy, self.step : {self.step}")
+        #print(f"when update the policy, self.step : {self.step}")
 
         # outer step
         # final inner step
@@ -167,7 +167,7 @@ class DatasetConfig:
 
 @chika.config
 class MetaConfig:
-    lr: float = 1e-3
+    lr: float = 0.1             # 1e-3 # jun ota edition
     da_interval: int = 60
     warmup_epochs: int = 30
     approx_iters: int = 5
@@ -180,7 +180,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("cifar_resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
+    model_name: str = chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition DEBUG
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 1            # None  # jun ota edition
     debug: bool = False
@@ -196,6 +196,10 @@ def _main(cfg: Config):
     print(f"EXECUTED AT : {str(todays_date)}") 
 
     train_loader, test_loader, num_classes = get_data(cfg.data)
+
+    # debug
+    #print(f"train_loade.train_no_da_loader.dataset.transforms : {train_loader.train_no_da_loader.dataset.transforms}") 
+
     model = MODEL_REGISTRY(cfg.model_name)(num_classes=num_classes)
     #optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.9, weight_decay=cfg.optim.wd, multi_tensor=True,
     #                             nesterov=cfg.optim.nesterov)
@@ -213,6 +217,11 @@ def _main(cfg: Config):
                                  std=torch.as_tensor(train_loader.mean_std[1]),
                                  operation_count=2)
     train_loader.register_policy(policy)
+
+    #debug
+    #print(f"train_loader.train_da_loader.dataset.transform.transforms : {train_loader.train_da_loader.dataset.transform.transforms}")
+    #sys.exit("debug")
+
     with NeumannTrainer(model, optimizer, F.cross_entropy, scheduler=scheduler,
                         reporters=homura.reporters.TensorboardReporter("."),
                         quiet=True, # jun ota edition
@@ -232,11 +241,11 @@ def _main(cfg: Config):
                             cfg.model_name+"_"+cfg.data.name+"_"+
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
-    torch.save(policy.state_dict(), policy_save_filename)
+    torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # output the .pt file outside of the output directory
 
     # jun ota debug
-    for pp in policy.parameters():
-        print(pp)
+    #for pp in policy.parameters():
+    #    print(pp)
 
 @chika.main(cfg_cls=Config, change_job_dir=True)
 def main(cfg):

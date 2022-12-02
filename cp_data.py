@@ -89,11 +89,11 @@ class TrainLoader:
         tnl = self.train_no_da_loader
         dataset = copy.deepcopy(tnl.dataset)
         dataset.transform.transforms = self.train_da + [policy.pil_forward] + [ToTensor(),
-                                                                               Normalize(*self.mean_std),
-                                                                               RandomErasing()]
-
-        # jun ota edition, RandomErasing() should not be here
-        #dataset.transform.transforms = self.train_da + [policy.pil_forward] + [ToTensor(),Normalize(*self.mean_std)]
+                                                                               Normalize(*self.mean_std)] #),
+        #                                                                       RandomErasing()] # jun ota edition
+        
+        # jun ota debug
+        #dataset.transform.transforms = self.train_da + [ToTensor(),Normalize(*self.mean_std),RandomErasing()]
 
         train_loader = DataLoader(dataset, batch_size=tnl.batch_size, shuffle=True, num_workers=tnl.num_workers,
                                   pin_memory=tnl.pin_memory)
@@ -103,9 +103,16 @@ class TrainLoader:
 def get_data(cfg):
     ds = DATASET_REGISTRY(cfg.name).setup(batch_size=cfg.batch_size, num_workers=cfg.num_workers,
                                           pin_memory=cfg.pin_memory, download=cfg.download, train_size=cfg.train_size,
-                                          val_size=cfg.val_size, post_norm_train_da=[RandomErasing()]) # ) # , post_norm_train_da=[RandomErasing()]) # jun ota edition DEBUG
+                                          val_size=cfg.val_size) #, post_norm_train_da=[RandomErasing()]) # jun ota edition
+                                          # norm=[ToTensor()]) <--- NEVER necessary
     norm = ds.default_norm[-1]
     train_loader = ds.train_loader
-    train_loader.dataset.transform.transforms.pop(-2)
+
+    # jun ota edition
+    # train_loader.dataset.transform.transforms.pop(-2) # <--- NOT GOOD when remove RandomErasing(), 
+                                                        # this REMOVES ToTensor() instead of Normalize() defined in homura/homura/vision/data/__init__.py
+    train_loader.dataset.transform.transforms.pop(-1)   # <--- GOOD when remove RandomErasing(),
+                                                        # this removes Normalize()
+    
     return TrainLoader(None, train_loader, ds.val_loader, ds.default_train_da, cfg.da_interval,
                        (norm.mean, norm.std)), ds.test_loader, ds.num_classes
