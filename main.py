@@ -168,8 +168,8 @@ class DatasetConfig:
 @chika.config
 class MetaConfig:
     lr: float = 0.1             # 1e-3 # jun ota edition
-    da_interval: int = 60
-    warmup_epochs: int = 30
+    da_interval: int = 312      # 60 # jun ota edition
+    warmup_epochs: int = 270    # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
 
@@ -241,11 +241,13 @@ def _main(cfg: Config):
                             cfg.model_name+"_"+cfg.data.name+"_"+
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
+    policy.cpu()
     torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # output the .pt file outside of the output directory
 
     # jun ota debug
-    #for pp in policy.parameters():
-    #    print(pp)
+    print("---- ---- ---- ---- the below : the optimized policy parameters ---- ---- ---- ----")
+    for pp in policy.parameters():
+        print(pp)
 
 @chika.main(cfg_cls=Config, change_job_dir=True)
 def main(cfg):
