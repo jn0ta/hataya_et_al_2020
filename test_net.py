@@ -126,7 +126,7 @@ trainset_rate = 0.8         # = training set size / (training set size + validat
 val_test_batch_size = batch_size * 2                                # ACCORDING TO hataya et.al., 2020, set this
 mean_std = ((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))     # mean and starndard deviation for the transforms : Normalize()
 
-policy_save_filename = "polDict_2022-12-5-4-59-45_resnet18_cifar10_1_270_312.pt"
+policy_save_filename = "polDict_2022-12-5-5-22-32_resnet18_cifar10_300_270_312.pt"
                         # "./outputs/2022_1201_071615_becca9/polDict_2022-12-1-7-16-17_cifar_resnet18_cifar10_300_30_60.pt"
 
 T0 = 300        # number of epochs for model training
@@ -187,7 +187,7 @@ policy = Policy.madao_policy(temperature=0.1,
                                  operation_count=2)
 
 policy.load_state_dict( torch.load(policy_save_filename) )
-print(f" the loaded file : {policy_save_filename}")
+ptf.print(f" the loaded file : {policy_save_filename}")
 
 if use_cuda: 
     policy.cuda()

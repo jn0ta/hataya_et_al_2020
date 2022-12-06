@@ -167,7 +167,7 @@ class DatasetConfig:
 
 @chika.config
 class MetaConfig:
-    lr: float = 0.1             # 1e-3 # jun ota edition
+    lr: float = 0.01            # 1e-3 # jun ota edition
     da_interval: int = 312      # 60 # jun ota edition
     warmup_epochs: int = 270    # 30 # jun ota edition
     approx_iters: int = 5
@@ -242,6 +242,7 @@ def _main(cfg: Config):
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
     policy.cpu()
+    print(f"the time when saving the policy{datetime.datetime.today().replace(microsecond=0)}")
     torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # output the .pt file outside of the output directory
 
     # jun ota debug
