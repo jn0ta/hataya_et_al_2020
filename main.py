@@ -19,6 +19,10 @@ import torchvision.models as models
 import sys
 import datetime
 
+# jun ota addition
+import matplotlib.pyplot as plt 
+import torchvision.transforms as transforms
+
 def param_to_vector(p: tuple[torch.Tensor, ...] | list[torch.Tensor]) -> torch.Tensor:
     # unlike pytorch's parameters_to_vec,
     # no device check, but allows non-contiguous params, which may happens in second derivatives
@@ -96,6 +100,12 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.optimizer.step()
             self.reporter.add("loss", in_loss.detach_())
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
+            
+            # jun ota edition, check policy.pil_forward output
+            #if self.step in [0,1,2]:
+            #    #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
+            #    plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
+            
             return
 
         # jun ota debug
@@ -105,6 +115,12 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         # final inner step
         self.optimizer.zero_grad()
         input = self.policy(data.train_no_da)
+
+        # jun ota edition
+        #plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
+        #plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
+        #_ = input("paused, hit Enter to continue")
+
         out_output = self.model(input)
         in_loss = self.loss_f(out_output, data.train_labels_no_da)
         in_loss.backward(retain_graph=True)
@@ -135,6 +151,13 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         # (∂g/∂θ H^{-1}) (∂/∂φ)(∂f/∂θ)
         mix_grad = autograd.grad(in_grad, self.policy.parameters(), grad_outputs=out_in_hessian, allow_unused=True)
         self.set_aug_grad(mix_grad)
+
+        # jun ota addition
+        print("  policy gradient")
+        if self.epoch == self.cfg.warmup_epochs:
+            for pp in self.policy.parameters():
+                print(pp.grad.data)
+
         self.policy_optimizer.step()
         self.policy_optimizer.zero_grad()
 
@@ -143,7 +166,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 class OptimConfig:
     lr: float = 0.1
     wd: float = 0.0 # 5e-4 # jun ota edition
-    epochs: int = 300
+    epochs: int = 40
     no_nesterov: bool = True
 
     def __post_init__(self):
@@ -168,8 +191,8 @@ class DatasetConfig:
 @chika.config
 class MetaConfig:
     lr: float = 0.01            # 1e-3 # jun ota edition
-    da_interval: int = 312      # 60 # jun ota edition
-    warmup_epochs: int = 270    # 30 # jun ota edition
+    da_interval: int = 312 # 60 # jun ota edition
+    warmup_epochs: int = 20     #170 # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
 
@@ -180,9 +203,9 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition DEBUG
+    model_name: str = chika.choices("simple_cnn") #chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
-    gpu: int = 1            # None  # jun ota edition
+    gpu: int = 0            # None  # jun ota edition
     debug: bool = False
     baseline: bool = False
 
@@ -206,11 +229,16 @@ def _main(cfg: Config):
 
     # jun ota edition
     optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.0, weight_decay=cfg.optim.wd, multi_tensor=True, nesterov=cfg.optim.nesterov)
+    # jun ota memo
+    # the option, multi_tensor, looks just for faster training    https://github.com/huggingface/transformers/issues/9965
 
     #scheduler = homura.lr_scheduler.CosineAnnealingWithWarmup(cfg.optim.epochs, 5, 1e-6)
     
     # jun ota edition
-    scheduler = homura.lr_scheduler.MultiStepLR(milestones=[90, 180, 240], gamma=0.2)
+    milestones = [int(cfg.optim.epochs*3/10), int(cfg.optim.epochs*6/10), int(cfg.optim.epochs*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
+    #print(f"milestones : {milestones}") # <-- milestones : [60, 120, 160] when cfg.optim.epochs == 200
+    #sys.exit("debug")
+    scheduler = homura.lr_scheduler.MultiStepLR(milestones=milestones, gamma=0.2)
     
     policy = Policy.madao_policy(temperature=cfg.meta.temperature,
                                  mean=torch.as_tensor(train_loader.mean_std[0]),

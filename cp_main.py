@@ -143,7 +143,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 class OptimConfig:
     lr: float = 0.1
     wd: float = 0.0 # 5e-4 # jun ota edition
-    epochs: int = 1 # 300 # debug
+    epochs: int = 200
     no_nesterov: bool = True
 
     def __post_init__(self):
@@ -167,9 +167,9 @@ class DatasetConfig:
 
 @chika.config
 class MetaConfig:
-    lr: float = 1e-3
-    da_interval: int = 60
-    warmup_epochs: int = 30
+    lr: float = 0.01            # 1e-3 # jun ota edition
+    da_interval: int = 312      # 60 # jun ota edition
+    warmup_epochs: int = 170    # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
 
@@ -210,7 +210,10 @@ def _main(cfg: Config):
     #scheduler = homura.lr_scheduler.CosineAnnealingWithWarmup(cfg.optim.epochs, 5, 1e-6)
     
     # jun ota edition
-    scheduler = homura.lr_scheduler.MultiStepLR(milestones=[90, 180, 240], gamma=0.2)
+    milestones = [int(cfg.optim.epochs*3/10), int(cfg.optim.epochs*6/10), int(cfg.optim.epochs*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
+    #print(f"milestones : {milestones}") # <-- milestones : [60, 120, 160] when cfg.optim.epochs == 200
+    #sys.exit("debug")
+    scheduler = homura.lr_scheduler.MultiStepLR(milestones=milestones, gamma=0.2)
     
     policy = Policy.madao_policy(temperature=cfg.meta.temperature,
                                  mean=torch.as_tensor(train_loader.mean_std[0]),
@@ -241,11 +244,14 @@ def _main(cfg: Config):
                             cfg.model_name+"_"+cfg.data.name+"_"+
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
-    torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # debug
+    policy.cpu()
+    print(f"the time when saving the policy{datetime.datetime.today().replace(microsecond=0)}")
+    torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # output the .pt file outside of the output directory
 
     # jun ota debug
-    #for pp in policy.parameters():
-    #    print(pp)
+    print("---- ---- ---- ---- the below : the optimized policy parameters ---- ---- ---- ----")
+    for pp in policy.parameters():
+        print(pp)
 
 @chika.main(cfg_cls=Config, change_job_dir=True)
 def main(cfg):

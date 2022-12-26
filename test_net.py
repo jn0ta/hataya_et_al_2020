@@ -1,5 +1,4 @@
-import time
-import datetime
+import time, datetime, os
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -129,9 +128,15 @@ mean_std = ((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))     # mean and s
 policy_save_filename = "polDict_2022-12-5-5-22-32_resnet18_cifar10_300_270_312.pt"
                         # "./outputs/2022_1201_071615_becca9/polDict_2022-12-1-7-16-17_cifar_resnet18_cifar10_300_30_60.pt"
 
-T0 = 300        # number of epochs for model training
+T0 = 200        # number of epochs for model training
+milestones = [int(T0*3/10), int(T0*6/10), int(T0*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
 alpha = 0.1     # learning rate for model training
 
+use_cuda = torch.cuda.is_available()
+if use_cuda:
+    cuda_visible_devices = os.environ['CUDA_VISIBLE_DEVICES']
+else:
+    cuda_visible_devices = "None"
 FILENAME = str("testNet_"+
                 net_name+"_"+
                 dataset_name+"_"+
@@ -139,6 +144,7 @@ FILENAME = str("testNet_"+
                 str(alpha)+",-,-_"+
                 "-_"+
                 "-_"+
+                "_"+cuda_visible_devices+
                 ".txt")
 
 today_date = datetime.datetime.today().replace(microsecond=0)
@@ -235,7 +241,7 @@ ptf.print(f" len(full_aug_trainset) : {len(full_aug_trainset)}, len(testset) : {
 loss_fn = nn.CrossEntropyLoss() # train_loss, val_loss, test_loss
 
 test_net_optimizer = optim.SGD(test_net.parameters(), lr=alpha)
-test_net_scheduler = optim.lr_scheduler.MultiStepLR(test_net_optimizer, milestones=[90, 180, 240], gamma=0.2)
+test_net_scheduler = optim.lr_scheduler.MultiStepLR(test_net_optimizer, milestones=milestones, gamma=0.2)
 
 # ================================ MAIN ================================
 
