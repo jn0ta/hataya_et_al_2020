@@ -22,6 +22,7 @@ import datetime
 # jun ota addition
 import matplotlib.pyplot as plt 
 import torchvision.transforms as transforms
+import pathlib
 
 def param_to_vector(p: tuple[torch.Tensor, ...] | list[torch.Tensor]) -> torch.Tensor:
     # unlike pytorch's parameters_to_vec,
@@ -102,9 +103,9 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
             
             # jun ota edition, check policy.pil_forward output
-            #if self.step in [0,1,2]:
-            #    #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
-            #    plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
+            if self.step in [0,1,2,3,4]:
+                #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
+                plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
             
             return
 
@@ -117,8 +118,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         input = self.policy(data.train_no_da)
 
         # jun ota edition
-        #plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
-        #plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
+        plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
+        plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
         #_ = input("paused, hit Enter to continue")
 
         out_output = self.model(input)
@@ -153,10 +154,10 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         self.set_aug_grad(mix_grad)
 
         # jun ota addition
-        if self.epoch == self.cfg.warmup_epochs:
-            print("  policy gradient")
-            for pp in self.policy.parameters():
-                print(pp.grad.data)
+        #if self.epoch == self.cfg.warmup_epochs:
+        #    print("  policy gradient")
+        #    for pp in self.policy.parameters():
+        #        print(pp.grad.data)
 
         self.policy_optimizer.step()
         self.policy_optimizer.zero_grad()
@@ -203,7 +204,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("simple_cnn") #chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
+    model_name: str = chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 0            # None  # jun ota edition
     debug: bool = False
@@ -215,8 +216,8 @@ class Config:
 
 def _main(cfg: Config):
     # jun ota edition
-    todays_date = datetime.datetime.today().replace(microsecond=0)
-    print(f"EXECUTED AT : {str(todays_date)}") 
+    todays_date = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).replace(microsecond=0)
+    print(f"EXECUTED AT : {str(todays_date).replace('+09:00', '')}") 
 
     train_loader, test_loader, num_classes = get_data(cfg.data)
 
@@ -270,8 +271,10 @@ def _main(cfg: Config):
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
     policy.cpu()
-    print(f"the time when saving the policy{datetime.datetime.today().replace(microsecond=0)}")
-    torch.save(policy.state_dict(), str("../../"+policy_save_filename)) # output the .pt file outside of the output directory
+    path = pathlib.Path('../../polDicts/'+str(todays_date.date()))
+    if not path.exists(): path.mkdir(parents=True)
+    path = pathlib.Path('../../polDicts/'+str(todays_date.date())+"/"+policy_save_filename)
+    torch.save(policy.state_dict(), path) # output the .pt file outside of the directory "output"
 
     # jun ota debug
     print("---- ---- ---- ---- the below : the optimized policy parameters ---- ---- ---- ----")
