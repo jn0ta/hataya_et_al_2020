@@ -208,20 +208,20 @@ class Policy(nn.Module):
     def dda_operations():
         mag = 0.5
         out = [
-            ShearX(initial_magnitude=mag),
-            ShearY(initial_magnitude=mag),
+        #    ShearX(initial_magnitude=mag),
+        #    ShearY(initial_magnitude=mag),
+            TranslateX(initial_magnitude=mag),
             TranslateY(initial_magnitude=mag),
-            TranslateY(initial_magnitude=mag),
-            Rotate(initial_magnitude=mag),
-            Invert(),
-            Solarize(initial_magnitude=mag),
-            Posterize(initial_magnitude=mag),
-            Contrast(initial_magnitude=mag),
-            Saturate(initial_magnitude=mag),
-            Brightness(initial_magnitude=mag),
-            Sharpness(initial_magnitude=mag),
-            AutoContrast(),
-            Equalize(),
+        #    Rotate(initial_magnitude=mag),
+        #    Invert(),
+        #    Solarize(initial_magnitude=mag),
+        #    Posterize(initial_magnitude=mag),
+        #    Contrast(initial_magnitude=mag),
+        #    Saturate(initial_magnitude=mag),
+        #    Brightness(initial_magnitude=mag),
+        #    Sharpness(initial_magnitude=mag), # <-- subclass of _KernelOperation # jun ota memo
+        #    AutoContrast(),
+        #    Equalize(),
         ]
         return out
 

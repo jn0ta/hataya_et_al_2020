@@ -166,7 +166,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 class OptimConfig:
     lr: float = 0.1
     wd: float = 0.0 # 5e-4 # jun ota edition
-    epochs: int = 40
+    epochs: int = 60
     no_nesterov: bool = True
 
     def __post_init__(self):
@@ -191,7 +191,7 @@ class DatasetConfig:
 @chika.config
 class MetaConfig:
     lr: float = 0.01            # 1e-3 # jun ota edition
-    da_interval: int = 312 # 60 # jun ota edition
+    da_interval: int = 625 * 4  # <-- 40000/64 = 625     312 # 60 # jun ota edition
     warmup_epochs: int = 20     #170 # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
