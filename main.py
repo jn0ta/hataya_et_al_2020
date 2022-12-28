@@ -153,8 +153,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         self.set_aug_grad(mix_grad)
 
         # jun ota addition
-        print("  policy gradient")
         if self.epoch == self.cfg.warmup_epochs:
+            print("  policy gradient")
             for pp in self.policy.parameters():
                 print(pp.grad.data)
 
