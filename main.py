@@ -61,7 +61,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
     def set_aug_grad(self,
                      grads: Iterable) -> None:
         for grad, param in zip(grads, self.policy.parameters()):
-            param.grad = grad
+    #        param.grad = grad
+            param.grad = - grad # jun ota edition
 
     @torch.no_grad()
     def approx_ihvp(self,
@@ -74,9 +75,11 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             with torch.enable_grad():
                 # hessian vector product
                 out_grad = param_to_vector(grad(in_grad, params, grad_outputs=temp, retain_graph=True))
-            temp -= self.cfg.lr * out_grad.clone()
+    #        temp -= self.cfg.lr * out_grad.clone()
+            temp -= self.cfg.alpha * out_grad.clone() # jun ota edition
             approx += temp
-        return self.cfg.lr * approx
+    #    return self.cfg.lr * approx
+        return approx # jun ota edition
 
     def iteration(self,
                   data: dict or tuple) -> None:
@@ -196,6 +199,8 @@ class MetaConfig:
     warmup_epochs: int = 20     #170 # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
+    # jun ota edition
+    alpha: float = 0.001
 
 
 @chika.config
