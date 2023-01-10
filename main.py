@@ -23,6 +23,7 @@ import datetime
 import matplotlib.pyplot as plt 
 import torchvision.transforms as transforms
 import pathlib
+from listUp_ptFiles import *
 
 def param_to_vector(p: tuple[torch.Tensor, ...] | list[torch.Tensor]) -> torch.Tensor:
     # unlike pytorch's parameters_to_vec,
@@ -106,9 +107,9 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
             
             # jun ota edition, check policy.pil_forward output
-            if self.step in [0,1,2,3,4]:
+            #if self.step in [0,1,2,3,4]:
                 #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
-                plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
+            #    plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
             
             return
 
@@ -121,8 +122,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         input = self.policy(data.train_no_da)
 
         # jun ota edition
-        plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
-        plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
+        #plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
+        #plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
         #_ = input("paused, hit Enter to continue")
 
         out_output = self.model(input)
@@ -170,7 +171,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 class OptimConfig:
     lr: float = 0.1
     wd: float = 0.0 # 5e-4 # jun ota edition
-    epochs: int = 60
+    epochs: int = 10
     no_nesterov: bool = True
 
     def __post_init__(self):
@@ -196,7 +197,7 @@ class DatasetConfig:
 class MetaConfig:
     lr: float = 0.01            # 1e-3 # jun ota edition
     da_interval: int = 625 * 4  # <-- 40000/64 = 625     312 # 60 # jun ota edition
-    warmup_epochs: int = 20     #170 # 30 # jun ota edition
+    warmup_epochs: int = 2     #170 # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
     # jun ota edition
@@ -270,7 +271,7 @@ def _main(cfg: Config):
         
     # jun ota edition, saving the policy to a pytorch file xxxx.pt
     policy_save_filename = str("polDict_"+
-                            str(todays_date.year)+"-"+str(todays_date.month)+"-"+str(todays_date.day)+"-"+
+                            str(todays_date.date())+"-"+
                             str(todays_date.hour)+"-"+str(todays_date.minute)+"-"+str(todays_date.second)+"_"+
                             cfg.model_name+"_"+cfg.data.name+"_"+
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
@@ -280,6 +281,7 @@ def _main(cfg: Config):
     if not path.exists(): path.mkdir(parents=True)
     path = pathlib.Path('../../polDicts/'+str(todays_date.date())+"/"+policy_save_filename)
     torch.save(policy.state_dict(), path) # output the .pt file outside of the directory "output"
+    listUp_ptFiles(todays_date, policy_save_filename)
 
     # jun ota debug
     print("---- ---- ---- ---- the below : the optimized policy parameters ---- ---- ---- ----")

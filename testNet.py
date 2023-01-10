@@ -1,4 +1,4 @@
-import time, datetime, os, pathlib
+import time, datetime, os, pathlib, argparse
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -113,11 +113,11 @@ def modelTraining( _arg_dict:dict):
     _ptf = _arg_dict["ptf"]["ptf"]
     _ptf2 = _arg_dict["ptf"]["ptf2"]
     _ptf.print("start TEST model training -->")
-    _T0 = _arg_dict["N_iter"]["T0"]
+    _testNetEpoch = _arg_dict["N_iter"]["testNetEpoch"]
     _net_optimizer = _arg_dict["optimizer"]["net"]
     _net_scheduler = _arg_dict["scheduler"]["net"]
 
-    for _epoch in range(_T0):
+    for _epoch in range(_testNetEpoch):
         torch.cuda.synchronize()
         _time_one_epoch = time.time()
 
@@ -132,7 +132,7 @@ def modelTraining( _arg_dict:dict):
         if (_epoch+1)%10 == 0:
             _test_loss, _test_acc = test(_arg_dict)
             _ptf.print(" test_loss:{:.3f}".format(_test_loss)+" test_acc:{:.3f}".format(_test_acc))
-        if _epoch == _T0-1:
+        if _epoch == _testNetEpoch-1:
             _test_loss, _test_acc = test(_arg_dict)
             _ptf2.print(str(_test_loss.item())+","+str(_test_acc.item())) # record the test loss and accuracy of the LAST epoch
 
@@ -141,18 +141,23 @@ def modelTraining( _arg_dict:dict):
 
 # ================================ configurations ================================
 
-net_name = "simple_cnn"
+parser = argparse.ArgumentParser()
+parser.add_argument('-polDict', type=str, help="a policy-saving .pt file")
+parser.add_argument('-mdl', default='simple_cnn', type=str, help='model (default: simple_cnn)')
+parser.add_argument('-ds', default='CIFAR10', type=str, help='dataset name (default: CIFAR10)')
+parser.add_argument('-bs', default=64, type=int, help='model-training batch size (default: 64), cant be 1')
+parser.add_argument('-epoch', default=100, type=int, help='model training epoch')
+parser.add_argument('-alpha', default=0.1, type=float, help='initial l.r. for model training')
+args = parser.parse_args()
+policy_save_filename = args.polDict
+netName = args.mdl
+datasetName = args.ds
+batchSize = args.bs
+testNetEpoch = args.epoch
+alpha = args.alpha
 
-dataset_name = "CIFAR10"
-batch_size = 64             # batch size cant be 1
-val_test_batch_size = batch_size * 2                                # ACCORDING TO hataya et.al., 2020, set this
+val_test_batchSize = batchSize * 2                                  # ACCORDING TO hataya et.al., 2020, set this
 mean_std = ((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))     # mean and starndard deviation for the transforms : Normalize()
-
-policy_save_filename = "polDict_2022-12-27-9-10-3_simple_cnn_cifar10_60_20_2500.pt"
-                        
-T0 = 100        # number of epochs for model training
-milestones = [int(T0*3/10), int(T0*6/10), int(T0*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
-alpha = 0.1     # learning rate for model training
 
 use_cuda = torch.cuda.is_available()
 if use_cuda:
@@ -160,9 +165,9 @@ if use_cuda:
 else:
     cuda_visible_devices = "None"
 FILENAME = str("testNet_"+
-                net_name+"_"+
-                dataset_name+"_"+
-                str(T0)+",-,-,-_"+
+                netName+"_"+
+                datasetName+"_"+
+                str(testNetEpoch)+",-,-,-_"+
                 str(alpha)+",-,-_"+
                 "-_"+
                 "-_"+
@@ -178,9 +183,9 @@ net_func_dicts = {
     "resnet18" : lambda : models.resnet18(), 
     "simple_cnn" : lambda : Simple_CNN()
 }
-net_func = net_func_dicts[net_name]
+net_func = net_func_dicts[netName]
 net = net_func()
-ptf.print(f" model : {net_name}")
+ptf.print(f" model : {netName}")
 
 if use_cuda:
     ptf.print(" USING CUDA")
@@ -202,6 +207,7 @@ policy = Policy.madao_policy(temperature=0.1,
                                  std=torch.as_tensor(mean_std[1]),
                                  operation_count=2)
 
+policy_save_filename = "polDicts/"+policy_save_filename[8:18]+"/"+policy_save_filename
 policy.load_state_dict( torch.load(policy_save_filename) )
 ptf.print(f" the loaded file : {policy_save_filename}")
 
@@ -218,30 +224,44 @@ ptf.print("policy building is DONE")
 
 # ================================ data preparatioin ================================
 
-transform_aug_train = transforms.Compose([
-    policy.pil_forward, # augmentation, by Hataya et al., 2022
-    transforms.ToTensor(),
-    transforms.Normalize(mean_std[0],mean_std[1])
-])
+if datasetName == "MNIST":
+    transform_aug_train = transforms.Compose([
+        transforms.Resize(32),
+        policy.pil_forward, # augmentation, by Hataya et al., 2022
+        transforms.ToTensor(),
+        transforms.Normalize(mean_std[0],mean_std[1])
+    ])
 
-transform_test = transforms.Compose([ 
-    transforms.ToTensor(),
-    transforms.Normalize(mean_std[0],mean_std[1])
-])
+    transform_test = transforms.Compose([
+        transforms.Resize(32), 
+        transforms.ToTensor(),
+        transforms.Normalize(mean_std[0],mean_std[1])
+    ])
+else:
+    transform_aug_train = transforms.Compose([
+        policy.pil_forward, # augmentation, by Hataya et al., 2022
+        transforms.ToTensor(),
+        transforms.Normalize(mean_std[0],mean_std[1])
+    ])
 
-if dataset_name == "CIFAR10":
+    transform_test = transforms.Compose([ 
+        transforms.ToTensor(),
+        transforms.Normalize(mean_std[0],mean_std[1])
+    ])
+
+if datasetName == "CIFAR10":
     augTrainset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_aug_train)
     testset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
-elif dataset_name == "MNIST":
+elif datasetName == "MNIST":
     augTrainset = datasets.MNIST(root='./data', train=True, download=True, transform=transform_aug_train)
     testset = datasets.MNIST(root='./data', train=False, download=True, transform=transform_test)
 
-augTrainloader = torch.utils.data.DataLoader(augTrainset, batch_size=batch_size, shuffle=True, num_workers=8)
-testloader = torch.utils.data.DataLoader(testset, batch_size=val_test_batch_size, shuffle=False, num_workers=8)
+augTrainloader = torch.utils.data.DataLoader(augTrainset, batch_size=batchSize, shuffle=True, num_workers=8)
+testloader = torch.utils.data.DataLoader(testset, batch_size=val_test_batchSize, shuffle=False, num_workers=8)
 
 ptf.print("datasets and dataloaders HAVE BEEN prepared")
-ptf.print(f" dataset name : {dataset_name}")
-ptf.print(f" batch size : {batch_size}")
+ptf.print(f" dataset name : {datasetName}")
+ptf.print(f" batch size : {batchSize}")
 ptf.print(f" len(augTrainset) : {len(augTrainset)}, len(testset) : {len(testset)}") 
 
 # ================================ optimizers, loss function, scheduler preparetion ================================
@@ -249,21 +269,23 @@ ptf.print(f" len(augTrainset) : {len(augTrainset)}, len(testset) : {len(testset)
 loss_fn = nn.CrossEntropyLoss() # train_loss, test_loss
 
 net_optimizer = optim.SGD(net.parameters(), lr=alpha)
+milestones = [int(testNetEpoch*3/10), int(testNetEpoch*6/10), int(testNetEpoch*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
 net_scheduler = optim.lr_scheduler.MultiStepLR(net_optimizer, milestones=milestones, gamma=0.2)
 
 # ================================ MAIN ================================
 
 arg_dict = {
     "ptf"       : {"ptf" : ptf, "ptf2" : ptf2},
-    "dataset"   : { "batch_size": batch_size, "test" : testset},
+    "dataset"   : { "batchSize": batchSize, "test" : testset},
     "dataloader": { "train" : augTrainloader, "test" : testloader},
-    "model"     : { "use_cuda" : use_cuda, "net_func" : net_func, "net" : net},
+    "model"     : { "use_cuda" : use_cuda,# "net_func" : net_func, 
+                    "net" : net},
     "policy"    : policy,
     "lr"        : { "model_train" : alpha},
     "optimizer" : {"net" : net_optimizer},
     "scheduler" : {"net" : net_scheduler},
     "loss_fn"   : loss_fn,
-    "N_iter"    : { "T0" : T0}
+    "N_iter"    : { "testNetEpoch" : testNetEpoch}
 }
 
 modelTraining(arg_dict)

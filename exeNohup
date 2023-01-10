@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# display help 
+Help(){
+  echo "options   : -m, AutoAugment, produce optimized policy .pt file, which number is given by 1st arg."
+  echo "          : -v, validation"
+  echo "          : -t, test"
+
+  echo "1st arg.  : if the option is -m, the number of the iteration of AA"
+  echo "          : if the option is -v or -t, the id of gpu to use"
+  echo "2nd arg.  : ONLY if the option is -v or -t, the policy-saving .pt file name list file"
+}
+
+SetCUDA(){
+  if ! [[ $1 =~ ^[0-9]$ ]];then
+    echo "given 1st arg. is NOT GPU id"
+    exit
+  fi
+
+  if [[ -z "${CUDA_VISIBLE_DEVICES}" ]]; then
+    # CUDA_VISIBLE_DEVICES is UNDEFINED
+    export CUDA_VISIBLE_DEVICES=$1
+    echo -n "set "
+    printenv | grep CUDA
+  else
+    # CUDA_VISIBLE_DEVICES is SET
+    unset CUDA_VISIBLE_DEVICES
+    echo "CUDA_VISIBLE_DEVICES unset"
+    export CUDA_VISIBLE_DEVICES=$1
+    echo -n "set "
+    printenv | grep CUDA
+  fi
+}
+
+dirname="nohup_stdio"
+if [[ ! -d "$dirname" ]];then
+  # the dir. $dirname does NOT exists"
+  mkdir $dirname
+fi
+date=$(date +'%Y-%m-%d')
+if [[ ! -d "${dirname}/${date}" ]];then
+  # the dir. ${dirname}/${date} does NOT exists"
+  mkdir ${dirname}/${date}
+fi
+
+while getopts mvt OPT
+do
+  case $OPT in
+    m)
+      echo "./exeMain AutoAugment"
+      time=$(TZ=JST-9 date +'%T')
+      nohup ./exeMain $2 >> ./${dirname}/${date}/nohup_exeMain_${time}.txt &;;
+    v)
+      echo "./exeValNet Validation"
+      SetCUDA $2
+      nohup ./exeValNet $3 >> ./${dirname}/${date}/nohup_exeValNet.txt &;;
+    t)
+      echo "./exeTestNet Test"
+      SetCUDA $2
+      nohup ./exeTestNet $3 >> ./${dirname}/${date}/nohup_exeTestNet.txt &;;
+    *)
+      echo "help"
+      Help
+  esac
+done

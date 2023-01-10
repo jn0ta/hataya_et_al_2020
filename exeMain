@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# 1st arg. : the number of the iteration of python command execution of the file
+
+FILENAME='main'
+
+# for record the polDict .pt file names in ONE file
+date2=$(TZ=JST-9 date +'%Y-%m-%d-%T')
+if [[ -z "${LISTUP_PTFILES}" ]]; then
+  # LISTUP_PTFILES is UNDEFINED
+  export LISTUP_PTFILES=$date2 
+  echo -n "set "
+  printenv | grep LISTUP_PTFILES
+else
+  # LISTUP_PTFILES has ALREADY been set
+  echo "CUDA_VISIBLE_DEVICES HAS BEEN set, <-- something wrong"
+  exit
+fi
+
+iter=1
+while [ $iter -le $1 ];do
+  python main.py
+  iter=$(($iter + 1))
+done
+
+unset LISTUP_PTFILES 
+echo "LISTUP_PTFILES unset"

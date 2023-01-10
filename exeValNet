@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# 1st arg. : the policy-saving file name list file
+
+FILENAME='valNet'
+policyDictFileNames=$(<$1)
+
+iter=1
+N_iter=$(echo "$policyDictFileNames" | perl -pe 's/[^,]//g' | wc -c)
+
+while [ $iter -le $N_iter ];do
+  pD=$(echo "$policyDictFileNames" | cut -f $iter -d ',')
+  python valNet.py -polDict $pD -mdl simple_cnn -epoch 10
+  iter=$(($iter + 1))
+done
