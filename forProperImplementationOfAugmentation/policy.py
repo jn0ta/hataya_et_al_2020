@@ -11,9 +11,11 @@ from torch import Tensor, nn
 from torch.distributions import Categorical
 from torch.nn import functional as F
 
-from dda.operations import *
-from dda.operations import _Operation, _KernelOperation
-from dda import functional, pil
+from hatayas import * # jun ota edition
+
+from .operations import * # from operations import * # jun ota edition
+from .operations import _Operation, _KernelOperation # from operations import _Operation, _KernelOperation # jun ota edition
+#import functional, pil # jun ota edition
 
 FUNCTIONAL_TO_PIL = {functional.auto_contrast: (pil.auto_contrast, 0, 1),
                      functional.equalize: (pil.equalize, 0, 1),
@@ -35,14 +37,15 @@ FUNCTIONAL_TO_PIL = {functional.auto_contrast: (pil.auto_contrast, 0, 1),
 def pil_forward(self: _Operation,
                 img: PILImage):
     if isinstance(self, _KernelOperation):
-        _pil_func, _, _ = FUNCTIONAL_TO_PIL[self._original_operation] # FUNCTIONAL_TO_PIL[self._original_operation.operation] # jun edition
+        _pil_func, _, _ = FUNCTIONAL_TO_PIL[self._original_operation] #._original_operation.operation] # jun ota edition
     else:
         _pil_func, _, _ = FUNCTIONAL_TO_PIL[self.operation]
-    mag = self._py_magnitude # self.py_magnitude # jun edition
+    mag = self._py_magnitude #py_magnitude # jun ota edition
     if self.flip_magnitude:
         if random.random() > 0.5:
             mag = - mag
-    prob = self._py_probability # self.py_probability # jun edition
+    prob = self._py_probability # py_probability # jun ota edition
+    #mag = mag * self.magnitude_scale # jun ota addition
     if random.random() <= prob:
         return _pil_func(img, mag)
     else:
@@ -175,6 +178,7 @@ class Policy(nn.Module):
             # data augmentation is applied by PIL
             # or testing
             return self.normalize(input)
+            
 
         if self.num_chunks > 1:
             out = [self._forward(inp) for inp in input.chunk(self.num_chunks)]
@@ -183,7 +187,7 @@ class Policy(nn.Module):
             x = self._forward(input)
 
         return self.normalize(x)
-
+        
     def pil_forward(self, img: PILImage):
         index = random.randrange(self.num_sub_policies)
         return self.sub_policies[index].pil_forward(img)
@@ -210,7 +214,7 @@ class Policy(nn.Module):
         out = [
             ShearX(initial_magnitude=mag),      # <-- doesnt work properly # jun ota memo
             ShearY(initial_magnitude=mag),      # <-- doesnt work properly # jun ota memo
-            TranslateX(initial_magnitude=mag),  # <-- doesnt work properly # jun ota memo
+            TranslateX(initial_magnitude=mag),  # <-- doesnt work properly  # jun ota memo
             TranslateY(initial_magnitude=mag),  # <-- doesnt work properly # jun ota memo
             Rotate(initial_magnitude=mag),      # <-- doesnt work properly # jun ota memo
             Invert(),                           # properly works # jun ota memo

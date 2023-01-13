@@ -41,7 +41,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         #self.policy_optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.cfg.lr)
 
         # jun ota edition
-        self.policy_optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.cfg.lr)
+        #self.policy_optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.cfg.lr)
+        self.policy_optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=self.cfg.lr)
 
     def infer_batch_size(self,
                          data
@@ -63,7 +64,11 @@ class NeumannTrainer(trainers.SupervisedTrainer):
                      grads: Iterable) -> None:
         for grad, param in zip(grads, self.policy.parameters()):
     #        param.grad = grad
-            param.grad = - grad # jun ota edition
+            # jun ota edition
+            if grad is not None:
+                param.grad = - grad
+            else:
+                param.grad = grad
 
     @torch.no_grad()
     def approx_ihvp(self,
@@ -107,9 +112,9 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
             
             # jun ota edition, check policy.pil_forward output
-            #if self.step in [0,1,2,3,4]:
+            if self.step in [0,1,2,3,4]:
                 #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
-            #    plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
+                plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
             
             return
 
@@ -122,8 +127,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         input = self.policy(data.train_no_da)
 
         # jun ota edition
-        #plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
-        #plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
+        plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
+        plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
         #_ = input("paused, hit Enter to continue")
 
         out_output = self.model(input)
@@ -170,8 +175,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 @chika.config
 class OptimConfig:
     lr: float = 0.1
-    wd: float = 0.0 # 5e-4 # jun ota edition
-    epochs: int = 10
+    wd: float = 5e-4 #0.0 # 5e-4 # jun ota edition
+    epochs: int = 300
     no_nesterov: bool = True
 
     def __post_init__(self):
@@ -181,10 +186,10 @@ class OptimConfig:
 @chika.config
 class DatasetConfig:
     name: str = chika.choices("cifar10")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
-    batch_size: int = 64    # 128   # jun ota edition
+    batch_size: int = 128   # jun ota edition
     download: bool = True   # False # jun edition
     train_size: int = None
-    val_size: int = 10000   # 4_000 # jun ota edition
+    val_size: int = 5000   # 4_000 # jun ota edition
     no_pin_memory: bool = False
     num_workers: int = 0    # 1     # jun ota edition, num_workers MUST be 0, otherwise the execution is struggling
 
@@ -196,8 +201,8 @@ class DatasetConfig:
 @chika.config
 class MetaConfig:
     lr: float = 0.01            # 1e-3 # jun ota edition
-    da_interval: int = 625 * 4  # <-- 40000/64 = 625     312 # 60 # jun ota edition
-    warmup_epochs: int = 2     #170 # 30 # jun ota edition
+    da_interval: int = 60       #625* 4  # <-- 40000/64 = 625     312 # 60 # jun ota edition
+    warmup_epochs: int = 30     #170 # 30 # jun ota edition
     approx_iters: int = 5
     temperature: float = 0.1
     # jun ota edition
@@ -210,7 +215,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("resnet18")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
+    model_name: str = chika.choices("wrn28_10")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 0            # None  # jun ota edition
     debug: bool = False
@@ -226,37 +231,27 @@ def _main(cfg: Config):
     print(f"EXECUTED AT : {str(todays_date).replace('+09:00', '')}") 
 
     train_loader, test_loader, num_classes = get_data(cfg.data)
-
-    # debug
-    #print(f"train_loade.train_no_da_loader.dataset.transforms : {train_loader.train_no_da_loader.dataset.transforms}") 
-
     model = MODEL_REGISTRY(cfg.model_name)(num_classes=num_classes)
-    #optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.9, weight_decay=cfg.optim.wd, multi_tensor=True,
-    #                             nesterov=cfg.optim.nesterov)
+    optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.9, weight_decay=cfg.optim.wd, multi_tensor=True,
+                                 nesterov=cfg.optim.nesterov)
 
     # jun ota edition
-    optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.0, weight_decay=cfg.optim.wd, multi_tensor=True, nesterov=cfg.optim.nesterov)
+    #optimizer = homura.optim.SGD(lr=cfg.optim.lr, momentum=0.0, weight_decay=cfg.optim.wd, multi_tensor=True, nesterov=cfg.optim.nesterov)
     # jun ota memo
     # the option, multi_tensor, looks just for faster training    https://github.com/huggingface/transformers/issues/9965
 
-    #scheduler = homura.lr_scheduler.CosineAnnealingWithWarmup(cfg.optim.epochs, 5, 1e-6)
+    scheduler = homura.lr_scheduler.CosineAnnealingWithWarmup(cfg.optim.epochs, 5, 1e-6)
     
     # jun ota edition
-    milestones = [int(cfg.optim.epochs*3/10), int(cfg.optim.epochs*6/10), int(cfg.optim.epochs*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
+    #milestones = [int(cfg.optim.epochs*3/10), int(cfg.optim.epochs*6/10), int(cfg.optim.epochs*8/10)] # the milestones for optim.lr_scheduler.MultiStepLR()
     #print(f"milestones : {milestones}") # <-- milestones : [60, 120, 160] when cfg.optim.epochs == 200
-    #sys.exit("debug")
-    scheduler = homura.lr_scheduler.MultiStepLR(milestones=milestones, gamma=0.2)
+    #scheduler = homura.lr_scheduler.MultiStepLR(milestones=milestones, gamma=0.2)
     
     policy = Policy.madao_policy(temperature=cfg.meta.temperature,
                                  mean=torch.as_tensor(train_loader.mean_std[0]),
                                  std=torch.as_tensor(train_loader.mean_std[1]),
                                  operation_count=2)
     train_loader.register_policy(policy)
-
-    #debug
-    #print(f"train_loader.train_da_loader.dataset.transform.transforms : {train_loader.train_da_loader.dataset.transform.transforms}")
-    #sys.exit("debug")
-
     with NeumannTrainer(model, optimizer, F.cross_entropy, scheduler=scheduler,
                         reporters=homura.reporters.TensorboardReporter("."),
                         quiet=True, # jun ota edition
