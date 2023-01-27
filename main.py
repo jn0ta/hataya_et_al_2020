@@ -112,9 +112,9 @@ class NeumannTrainer(trainers.SupervisedTrainer):
             self.reporter.add("accuracy", accuracy(in_output, data.train_labels_da))
             
             # jun ota edition, check policy.pil_forward output
-            if self.step in [0,1,2,3,4]:
+            #if self.step in [0,1,2,3,4]:
                 #print(f" type(data.train_da) : {type(data.train_da)}")     # <-- <class 'torch.Tensor'>
-                plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
+            #    plt.imshow(transforms.ToPILImage()(data.train_da[0])); plt.savefig("pil_forward_check_"+str(self.step)+".png")
             
             return
 
@@ -127,8 +127,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         input = self.policy(data.train_no_da)
 
         # jun ota edition
-        plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
-        plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
+        #plt.imshow(transforms.ToPILImage()(data.train_no_da[0])); plt.savefig("policy_check__Bfr_"+str(self.step)+".png")
+        #plt.imshow(transforms.ToPILImage()(input[0])); plt.savefig("policy_check__Aft_"+str(self.step)+".png")
         #_ = input("paused, hit Enter to continue")
 
         out_output = self.model(input)
@@ -185,7 +185,7 @@ class OptimConfig:
 
 @chika.config
 class DatasetConfig:
-    name: str = chika.choices("cifar10")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
+    name: str = chika.choices("cifar100")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
     batch_size: int = 128   # jun ota edition
     download: bool = True   # False # jun edition
     train_size: int = None
@@ -215,9 +215,9 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("wrn28_10")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
+    model_name: str = chika.choices("wrn28_2")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
-    gpu: int = 0            # None  # jun ota edition
+    gpu: int = 1            # None  # jun ota edition
     debug: bool = False
     baseline: bool = False
 
