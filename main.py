@@ -42,7 +42,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
 
         # jun ota edition
         #self.policy_optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.cfg.lr)
-        self.policy_optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=self.cfg.lr)
+        self.policy_optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=self.cfg.lr, alpha=0.9)
+        self.N_polIters = 0
 
     def infer_batch_size(self,
                          data
@@ -144,6 +145,8 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         self.policy_update(in_loss, out_loss)
         self.optimizer.zero_grad()
 
+        self.N_polIters += 1;print("self.N_polIters:",self.N_polIters) # jun ota edition
+
         self.reporter.add("loss/val", out_loss.detach_())
 
     def policy_update(self,
@@ -185,7 +188,7 @@ class OptimConfig:
 
 @chika.config
 class DatasetConfig:
-    name: str = chika.choices("cifar100")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
+    name: str = chika.choices("cifar10")   # chika.choices("cifar10", "cifar100", "svhn", ) # jun ota edition
     batch_size: int = 128   # jun ota edition
     download: bool = True   # False # jun edition
     train_size: int = None
@@ -215,7 +218,7 @@ class Config:
     optim: OptimConfig
     meta: MetaConfig
 
-    model_name: str = chika.choices("wrn28_2")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
+    model_name: str = chika.choices("wrn28_10")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
     gpu: int = 1            # None  # jun ota edition
     debug: bool = False
