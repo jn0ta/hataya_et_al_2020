@@ -23,7 +23,7 @@ import datetime
 import matplotlib.pyplot as plt 
 import torchvision.transforms as transforms
 import pathlib
-from listUp_ptFiles import *
+from savePolicy import *
 
 def param_to_vector(p: tuple[torch.Tensor, ...] | list[torch.Tensor]) -> torch.Tensor:
     # unlike pytorch's parameters_to_vec,
@@ -43,7 +43,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         # jun ota edition
         #self.policy_optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.cfg.lr)
         self.policy_optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=self.cfg.lr, alpha=0.9)
-        self.N_polIters = 0
+        #self.N_polIters = 0
 
     def infer_batch_size(self,
                          data
@@ -145,7 +145,7 @@ class NeumannTrainer(trainers.SupervisedTrainer):
         self.policy_update(in_loss, out_loss)
         self.optimizer.zero_grad()
 
-        self.N_polIters += 1;print("self.N_polIters:",self.N_polIters) # jun ota edition
+        #self.N_polIters += 1;print("self.N_polIters:",self.N_polIters) # jun ota edition
 
         self.reporter.add("loss/val", out_loss.detach_())
 
@@ -220,7 +220,7 @@ class Config:
 
     model_name: str = chika.choices("wrn28_10")  # chika.choices("wrn28_2", "wrn40_2") # jun ota edition
     seed: int = None        # 1     # jun ota edition, setting None means RANDOM (if seed = 1, NO randomness)
-    gpu: int = 1            # None  # jun ota edition
+    gpu: int = 0            # None  # jun ota edition
     debug: bool = False
     baseline: bool = False
 
@@ -275,11 +275,7 @@ def _main(cfg: Config):
                             str(cfg.optim.epochs)+"_"+str(cfg.meta.warmup_epochs)+"_"+str(cfg.meta.da_interval)+
                             ".pt")
     policy.cpu()
-    path = pathlib.Path('../../polDicts/'+str(todays_date.date()))
-    if not path.exists(): path.mkdir(parents=True)
-    path = pathlib.Path('../../polDicts/'+str(todays_date.date())+"/"+policy_save_filename)
-    torch.save(policy.state_dict(), path) # output the .pt file outside of the directory "output"
-    listUp_ptFiles(todays_date, policy_save_filename)
+    savePolicy(policy, policy_save_filename, "../../polDicts/")
 
     # jun ota debug
     print("---- ---- ---- ---- the below : the optimized policy parameters ---- ---- ---- ----")

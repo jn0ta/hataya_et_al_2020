@@ -4,10 +4,16 @@ from .detection import VOCDetection, det_collate_fn
 from .segmentation import ExtendedVOCSegmentation, seg_collate_fn
 from .visionset import VisionSet
 
+# jun ota edition
+from .cutout import *
+
 DATASET_REGISTRY = Registry('vision_datasets', type=VisionSet)
 
 from torchvision import datasets, transforms
 from .. import transforms as homura_transforms
+
+# jun ota edition
+from . import Cutout
 
 DATASET_REGISTRY.register_from_dict(
     {
@@ -15,7 +21,8 @@ DATASET_REGISTRY.register_from_dict(
                              [transforms.ToTensor(),
                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))],
                              [transforms.RandomCrop(32, padding=4, padding_mode='reflect'),
-                              transforms.RandomHorizontalFlip()]),
+                              transforms.RandomHorizontalFlip(), #]),
+                              transforms.ToTensor(), Cutout("CIFAR10"),transforms.ToPILImage()]), # jun ota edition
 
         'cifar100': VisionSet(datasets.CIFAR100, "~/.torch/data/cifar100", 100,
                               [transforms.ToTensor(),

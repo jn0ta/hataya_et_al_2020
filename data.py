@@ -104,14 +104,14 @@ def get_data(cfg):
     ds = DATASET_REGISTRY(cfg.name).setup(batch_size=cfg.batch_size, num_workers=cfg.num_workers,
                                           pin_memory=cfg.pin_memory, download=cfg.download, train_size=cfg.train_size,
                                           val_size=cfg.val_size) #, post_norm_train_da=[RandomErasing()]) # jun ota edition
-                                          # norm=[ToTensor()]) <--- NEVER necessary
+                                          # norm=[ToTensor()]) <--- unnecessary
     norm = ds.default_norm[-1]
     train_loader = ds.train_loader
 
     # jun ota edition
-    # train_loader.dataset.transform.transforms.pop(-2) # <--- NOT GOOD when remove RandomErasing(), 
+    # train_loader.dataset.transform.transforms.pop(-2) # <--- NOT GOOD when u removed RandomErasing(), 
                                                         # this REMOVES ToTensor() instead of Normalize() defined in homura/homura/vision/data/__init__.py
-    train_loader.dataset.transform.transforms.pop(-1)   # <--- GOOD when remove RandomErasing(),
+    train_loader.dataset.transform.transforms.pop(-1)   # <--- GOOD when u removed RandomErasing(),
                                                         # this removes Normalize()
     
     return TrainLoader(None, train_loader, ds.val_loader, ds.default_train_da, cfg.da_interval,
